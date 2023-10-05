@@ -1,0 +1,49 @@
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+model Thread {
+  id              String    @id
+  threadPostTitle String? @db.LongText
+  author          String?
+  messages        Message[]
+}
+
+model Message {
+  id        String  @id
+  author    String
+  userID    String
+  content   String @db.LongText
+  timestamp String
+  threadId  String
+  thread    Thread  @relation(fields: [threadId], references: [id])
+  emojis    Emoji[]
+  images    Image[]
+
+  @@index([threadId])
+}
+
+model Emoji {
+  id         String   @id
+  animated   Boolean
+  name       String?
+  identifier String
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id])
+
+  @@index([messageId])
+}
+
+model Image {
+  id        String   @id
+  url       String   @db.LongText
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id])
+
+  @@index([messageId])
+}

@@ -1,0 +1,30 @@
+{
+  "name": "scrape-discord",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch ./src/index.ts",
+    "start": "bun ./src/index.ts",
+    "prisma:migrate": "prisma migrate dev --name init --preview-feature",
+    "db:push": "prisma db push"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cors": "8.4.0",
+    "@prisma/client": "^5.4.1",
+    "bun": "^1.0.4",
+    "discord.js": "^14.13.0",
+    "fastify": "^4.23.2",
+    "zod": "^3.22.3"
+  },
+  "devDependencies": {
+    "prisma": "^5.4.1",
+    "@types/node": "^20.8.2",
+    "discord-api-types": "^0.37.59",
+    "typescript": "^5.2.2"
+  }
+}
