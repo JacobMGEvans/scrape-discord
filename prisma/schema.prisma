@@ -6,12 +6,15 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
 model Thread {
   id              String    @id
   threadPostTitle String? @db.LongText
   author          String?
   messages        Message[]
+
+  @@fulltext([threadPostTitle])
 }
 
 model Message {
@@ -26,6 +29,7 @@ model Message {
   images    Image[]
 
   @@index([threadId])
+  @@fulltext([content])
 }
 
 model Emoji {
