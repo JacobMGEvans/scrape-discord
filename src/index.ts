@@ -1,16 +1,14 @@
 import fastify from "fastify";
-import {
-  Client,
-  ChannelType,
-  ForumChannel,
-  GuildEmoji,
-  Emoji,
-  ReactionEmoji,
-} from "discord.js";
+import { Client, ChannelType, ForumChannel, MessageType } from "discord.js";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 const server = fastify();
 const prisma = new PrismaClient();
+// Initialize Discord client
+const client = new Client({
+  intents: ["Guilds", "GuildMessages"],
+});
+await client.login(process.env.DISCORD_TOKEN);
 
 const startServer = async () => {
   try {
@@ -19,12 +17,23 @@ const startServer = async () => {
   } catch (error) {
     console.error("Error starting server:", error);
   }
+
+  // Listen to new message events
+  client.on("threadCreate", async (thread) => {
+    if (thread.type === ChannelType.PublicThread) {
+      // Fetch the channel messages and store/update them in the DB
+      await fetchChannelMessages(thread.id, client);
+    }
+  });
 };
 startServer();
 
-server.get("/", async (_, reply) => {
+server.get("/manual-scrape", async (_, reply) => {
   try {
-    const forumPosts = await fetchChannelMessages("1156708804134703205");
+    const forumPosts = await fetchChannelMessages(
+      "1156708804134703205",
+      client
+    );
     return JSON.stringify(forumPosts, null, 2);
   } catch (error) {
     reply.status(500);
@@ -32,13 +41,8 @@ server.get("/", async (_, reply) => {
   }
 });
 
-async function fetchChannelMessages(channelId: string) {
+async function fetchChannelMessages(channelId: string, client: Client) {
   try {
-    const client = new Client({
-      intents: ["Guilds", "GuildMessages"],
-    });
-    await client.login(process.env.DISCORD_TOKEN);
-
     const channel = await client.channels.fetch(channelId);
     if (!channel || channel.type !== ChannelType.GuildForum)
       throw new Error("Channel not found");
