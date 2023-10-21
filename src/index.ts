@@ -1,10 +1,11 @@
 import fastify from "fastify";
-import { Client, ChannelType, ForumChannel, MessageType } from "discord.js";
+import { Client, ChannelType, ForumChannel } from "discord.js";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 const server = fastify();
 const prisma = new PrismaClient();
-// Initialize Discord client
+
+const FORUM_CHANNEL_ID = "1156708804134703205"; //! fake servers forum channel id
 const client = new Client({
   intents: ["Guilds", "GuildMessages"],
 });
@@ -30,10 +31,7 @@ startServer();
 
 server.get("/manual-scrape", async (_, reply) => {
   try {
-    const forumPosts = await fetchChannelMessages(
-      "1156708804134703205",
-      client
-    );
+    const forumPosts = await fetchChannelMessages(FORUM_CHANNEL_ID, client);
     return JSON.stringify(forumPosts, null, 2);
   } catch (error) {
     reply.status(500);
@@ -41,9 +39,9 @@ server.get("/manual-scrape", async (_, reply) => {
   }
 });
 
-async function fetchChannelMessages(channelId: string, client: Client) {
+async function fetchChannelMessages(channelID: string, client: Client) {
   try {
-    const channel = await client.channels.fetch(channelId);
+    const channel = await client.channels.fetch(channelID);
     if (!channel || channel.type !== ChannelType.GuildForum)
       throw new Error("Channel not found");
 
@@ -91,7 +89,7 @@ async function fetchChannelMessages(channelId: string, client: Client) {
               userID: message.userID,
               content: message.content,
               timestamp: message.timestamp,
-              threadId: forumPost.id,
+              threadID: forumPost.id,
             })
           ) ?? [];
 
@@ -102,7 +100,7 @@ async function fetchChannelMessages(channelId: string, client: Client) {
               name: emoji.name,
               animated: emoji.animated ?? false,
               identifier: emoji.identifier,
-              messageId: message.id,
+              messageID: message.id,
             }))
           ) ?? [];
 
@@ -111,7 +109,7 @@ async function fetchChannelMessages(channelId: string, client: Client) {
             message.images.map((url, index) => ({
               id: `${message.id}-image-#${index}`,
               url: url,
-              messageId: message.id,
+              messageID: message.id,
             }))
           ) ?? [];
 

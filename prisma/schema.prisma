@@ -23,12 +23,12 @@ model Message {
   userID    String
   content   String @db.LongText
   timestamp String
-  threadId  String
-  thread    Thread  @relation(fields: [threadId], references: [id])
+  threadID  String
+  thread    Thread  @relation(fields: [threadID], references: [id])
   emojis    Emoji[]
   images    Image[]
 
-  @@index([threadId])
+  @@index([threadID])
   @@fulltext([content])
 }
 
@@ -37,17 +37,17 @@ model Emoji {
   animated   Boolean
   name       String?
   identifier String
-  messageId  String
-  message    Message  @relation(fields: [messageId], references: [id])
+  messageID  String
+  message    Message  @relation(fields: [messageID], references: [id])
 
-  @@index([messageId])
+  @@index([messageID])
 }
 
 model Image {
   id        String   @id
   url       String   @db.LongText
-  messageId String
-  message   Message  @relation(fields: [messageId], references: [id])
+  messageID String
+  message   Message  @relation(fields: [messageID], references: [id])
 
-  @@index([messageId])
+  @@index([messageID])
 }
