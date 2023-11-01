@@ -25,11 +25,15 @@ const startServer = async () => {
   }
 
   // Listen to new message events
-  client.on("messageCreate", async (message) => {
-    const thread = message.channel as AnyThreadChannel<boolean>;
-    if (thread.type === ChannelType.PublicThread) {
+  client.on("threadUpdate", async (oldThread, newThread) => {
+    // check if thread messages are new or updated then update the DB
+    if (oldThread.messages.cache.size !== newThread.messages.cache.size) {
+      //!!!! Fetch the thread messages and store/update them in the DB
+      await fetchNewMessages(newThread.id, client);
+    }
+    if (newThread.type === ChannelType.PublicThread) {
       // Fetch the channel messages and store/update them in the DB
-      await fetchChannelMessages(thread.id, client);
+      await fetchAllChannelMessages(newThread.id, client);
     }
   });
 };
@@ -37,7 +41,7 @@ startServer();
 
 server.get("/manual-scrape", async (_, reply) => {
   try {
-    const forumPosts = await fetchChannelMessages(FORUM_CHANNEL_ID, client);
+    const forumPosts = await fetchAllChannelMessages(FORUM_CHANNEL_ID, client);
     return JSON.stringify(forumPosts, null, 2);
   } catch (error) {
     reply.status(500);
@@ -45,7 +49,7 @@ server.get("/manual-scrape", async (_, reply) => {
   }
 });
 
-async function fetchChannelMessages(channelID: string, client: Client) {
+async function fetchAllChannelMessages(channelID: string, client: Client) {
   try {
     const channel = await client.channels.fetch(channelID);
     if (!channel || channel.type !== ChannelType.GuildForum)
@@ -67,10 +71,11 @@ async function fetchChannelMessages(channelID: string, client: Client) {
   }
 }
 
+//*** Rename Function */
 async function somethingDBRelated(
   threads: (AnyThreadChannel<boolean> | null)[]
 ) {
-  // This needs to be batched
+  //!!!! This needs to be batched, so we dont get rated limited by Discord
   return await Promise.all(
     threads.map(async (thread) => {
       const messages = await thread?.messages.fetch();
