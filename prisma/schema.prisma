@@ -10,8 +10,9 @@ generator client {
 }
 model Thread {
   id              String    @id
-  threadPostTitle String? @db.LongText
+  threadPostTitle String?   @db.LongText
   author          String?
+  lastMessageId   String?
   messages        Message[]
 
   @@fulltext([threadPostTitle])
@@ -20,15 +21,15 @@ model Thread {
 model Message {
   id        String  @id
   author    String
-  userID    String
-  content   String @db.LongText
+  userId    String
+  content   String  @db.LongText
   timestamp String
-  threadID  String
-  thread    Thread  @relation(fields: [threadID], references: [id])
+  threadId  String
+  thread    Thread  @relation(fields: [threadId], references: [id])
   emojis    Emoji[]
   images    Image[]
 
-  @@index([threadID])
+  @@index([threadId])
   @@fulltext([content])
 }
 
@@ -37,17 +38,17 @@ model Emoji {
   animated   Boolean
   name       String?
   identifier String
-  messageID  String
-  message    Message  @relation(fields: [messageID], references: [id])
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id])
 
-  @@index([messageID])
+  @@index([messageId])
 }
 
 model Image {
   id        String   @id
   url       String   @db.LongText
-  messageID String
-  message   Message  @relation(fields: [messageID], references: [id])
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id])
 
-  @@index([messageID])
+  @@index([messageId])
 }

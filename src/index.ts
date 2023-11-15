@@ -10,7 +10,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 const server = fastify();
 const prisma = new PrismaClient();
 
-const FORUM_CHANNEL_ID = "1156708804134703205"; //! fake servers forum channel id
+const FORUM_CHANNEL_Id = "1156708804134703205"; //! fake servers forum channel id
 const client = new Client({
   intents: ["Guilds", "GuildMessages"],
 });
@@ -29,7 +29,7 @@ const startServer = async () => {
     // check if thread messages are new or updated then update the DB
     if (oldThread.messages.cache.size !== newThread.messages.cache.size) {
       //!!!! Fetch the thread messages and store/update them in the DB
-      await fetchNewMessages(newThread.id, client);
+      await fetchNewMessages(newThread, client);
     }
     if (newThread.type === ChannelType.PublicThread) {
       // Fetch the channel messages and store/update them in the DB
@@ -41,7 +41,7 @@ startServer();
 
 server.get("/manual-scrape", async (_, reply) => {
   try {
-    const forumPosts = await fetchAllChannelMessages(FORUM_CHANNEL_ID, client);
+    const forumPosts = await fetchAllChannelMessages(FORUM_CHANNEL_Id, client);
     return JSON.stringify(forumPosts, null, 2);
   } catch (error) {
     reply.status(500);
@@ -49,18 +49,34 @@ server.get("/manual-scrape", async (_, reply) => {
   }
 });
 
-async function fetchAllChannelMessages(channelID: string, client: Client) {
+/**
+ * ! This function is not complete, it needs to be used up update the DB
+ */
+async function fetchNewMessages(
+  threadId: AnyThreadChannel<boolean>,
+  client: Client
+) {
+  if (!threadId.lastMessageId) return;
+  const messages = await threadId.messages.fetch({
+    limit: 100,
+    after: threadId.lastMessageId,
+  });
+
+  // check if messages are new or updated then update the DB
+}
+
+async function fetchAllChannelMessages(channelId: string, client: Client) {
   try {
-    const channel = await client.channels.fetch(channelID);
+    const channel = await client.channels.fetch(channelId);
     if (!channel || channel.type !== ChannelType.GuildForum)
       throw new Error("Channel not found");
 
     const forumChannel = (await channel?.toJSON()) as ForumChannel; // Wish they could type this themselves
-    const threadIDs = forumChannel?.threads as unknown as string[]; // and had better typings
+    const threadIds = forumChannel?.threads as unknown as string[]; // and had better typings
 
     const threads = await Promise.all(
-      threadIDs.map(async (threadID) => {
-        const thread = await channel?.threads.fetch(threadID);
+      threadIds.map(async (threadId) => {
+        const thread = await channel?.threads.fetch(threadId);
         return thread;
       })
     );
@@ -71,24 +87,40 @@ async function fetchAllChannelMessages(channelID: string, client: Client) {
   }
 }
 
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
 //*** Rename Function */
 async function somethingDBRelated(
   threads: (AnyThreadChannel<boolean> | null)[]
 ) {
-  //!!!! This needs to be batched, so we dont get rated limited by Discord
+  /**
+   * !!!! This needs to be batched, so we dont get rated limited by Discord
+   */
   return await Promise.all(
     threads.map(async (thread) => {
       const messages = await thread?.messages.fetch();
-      if (!thread?.id || !thread?.name || !thread?.ownerId) return;
+      const threadId = thread?.id;
+      const threadName = thread?.name;
+      const threadOwnerId = thread?.ownerId;
+      const lastMessageId = thread?.lastMessageId;
+      if (
+        !isString(threadId) ||
+        !isString(threadName) ||
+        !isString(threadOwnerId) ||
+        !isString(lastMessageId)
+      )
+        throw new Error("Failed to parse thread data");
 
       const forumPost = {
-        id: thread.id,
-        threadPostTitle: thread?.name,
-        author: thread.ownerId,
+        id: threadId,
+        threadPostTitle: threadName,
+        author: threadOwnerId,
+        lastMessageId: String(lastMessageId),
         messages: messages?.map((m) => ({
           id: m.id,
           author: m.author.username,
-          userID: m.author.id,
+          userId: m.author.id,
           content: m.content,
           emojis: m.reactions.cache.map((r) => r.emoji),
           images: m.attachments.map((a) => a.url),
@@ -107,10 +139,10 @@ async function somethingDBRelated(
           Prisma.validator<Prisma.MessageCreateManyInput>()({
             id: message.id,
             author: message.author,
-            userID: message.userID,
+            userId: message.userId,
             content: message.content,
             timestamp: message.timestamp,
-            threadID: forumPost.id,
+            threadId: forumPost.id,
           })
         ) ?? [];
 
@@ -121,7 +153,7 @@ async function somethingDBRelated(
             name: emoji.name,
             animated: emoji.animated ?? false,
             identifier: emoji.identifier,
-            messageID: message.id,
+            messageId: message.id,
           }))
         ) ?? [];
 
@@ -130,7 +162,7 @@ async function somethingDBRelated(
           message.images.map((url, index) => ({
             id: `${message.id}-image-#${index}`,
             url: url,
-            messageID: message.id,
+            messageId: message.id,
           }))
         ) ?? [];
 
