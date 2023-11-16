@@ -4,9 +4,11 @@ import {
   ChannelType,
   ForumChannel,
   AnyThreadChannel,
+  Message,
+  Collection,
 } from "discord.js";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { isString } from "./helpers.ts";
+import { isNewMessageInThread, isString } from "./helpers.ts";
 
 const server = fastify();
 const prisma = new PrismaClient();
@@ -27,30 +29,41 @@ const startServer = async () => {
 
   // Listen to new message events
   client.on("threadUpdate", async (oldThread, newThread) => {
-    // check if thread messages are new or updated then update the DB
-    // Not sure if this checking the cache will work
-    if (oldThread.messages.cache.size !== newThread.messages.cache.size) {
-      //!!!! Fetch the thread messages and store/update them in the DB
-      await checkNewMessages(newThread);
-    }
+    console.log(
+      "THREAD UPDATE EVENT",
+      JSON.stringify(
+        {
+          oldThread,
+          newThread,
+        },
+        null,
+        2
+      )
+    );
+
+    if (!isNewMessageInThread(oldThread, newThread)) return;
+
+    const newMessages = await fetchNewMessages(newThread);
+
+    newMessages
+      ? processMessagesToDB(newMessages)
+      : new Error("Failed process new messages to DB");
   });
 };
 startServer();
 
-server.get("/manual-scrape", async (_, reply) => {
+server.get("/manually-scrape-forum", async (_, reply) => {
   try {
     const forumPosts = await fetchAllForumThreads(FORUM_CHANNEL_Id, client);
-    return JSON.stringify(forumPosts, null, 2);
+    const processedThreads = await processThreadsToDB(forumPosts);
+    return JSON.stringify(processedThreads, null, 2);
   } catch (error) {
     reply.status(500);
     return { error: `Failed to fetch channel messages ${error}` };
   }
 });
 
-/**
- * ! This function is not complete, it needs to be used up update the DB
- */
-async function checkNewMessages(threadId: AnyThreadChannel<boolean>) {
+async function fetchNewMessages(threadId: AnyThreadChannel<boolean>) {
   if (!threadId.lastMessageId) return;
 
   try {
@@ -60,7 +73,11 @@ async function checkNewMessages(threadId: AnyThreadChannel<boolean>) {
     });
     return messages;
   } catch (error) {
-    return JSON.stringify(`Failed to fetch channel messages ${error}`, null, 2);
+    return JSON.stringify(
+      `Failed to fetch NEW channel messages ${error}`,
+      null,
+      2
+    );
   }
 }
 
@@ -80,18 +97,18 @@ async function fetchAllForumThreads(channelId: string, client: Client) {
       })
     );
 
-    return await processThreadsToDBOperations(threads);
+    return threads;
   } catch (error) {
     throw JSON.stringify(`Failed to fetch channel messages ${error}`, null, 2);
   }
 }
 
-async function processThreadsToDBOperations(
-  threads: (AnyThreadChannel<boolean> | null)[]
-) {
+async function processThreadsToDB<
+  Threads extends (AnyThreadChannel<boolean> | null)[]
+>(threads: Threads) {
   const processedThreads = threads.filter(
-    (thread) => thread !== null
-  ) as AnyThreadChannel<boolean>[];
+    (thread): thread is AnyThreadChannel<boolean> => thread !== null
+  );
 
   return processedThreads.map(async (thread) => {
     if (!thread) return null;
@@ -194,4 +211,11 @@ async function processThreadsToDBOperations(
 
     return await prisma.$transaction(transactionQueries);
   });
+}
+
+// I want the function to infer the type of the messages
+function processMessagesToDB<
+  Messages extends string | Collection<string, Message<true>>
+>(messages: Messages) {
+  if (!messages) return;
 }
