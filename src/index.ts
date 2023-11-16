@@ -45,7 +45,7 @@ const startServer = async () => {
 
     const newMessages = await fetchNewMessages(newThread);
 
-    newMessages
+    newMessages instanceof Collection
       ? processMessagesToDB(newMessages)
       : new Error("Failed process new messages to DB");
   });
@@ -126,7 +126,7 @@ async function processThreadsToDB<
     )
       throw new Error("Failed to parse thread data");
 
-    const forumPost = {
+    const forumThreadPost = {
       id: threadId,
       threadPostTitle: threadName,
       author: threadOwnerId,
@@ -143,25 +143,25 @@ async function processThreadsToDB<
     };
 
     const threadData = Prisma.validator<Prisma.ThreadCreateInput>()({
-      id: forumPost.id,
-      threadPostTitle: forumPost.threadPostTitle,
-      author: forumPost.author,
+      id: forumThreadPost.id,
+      threadPostTitle: forumThreadPost.threadPostTitle,
+      author: forumThreadPost.author,
     });
 
     const messageData =
-      forumPost.messages?.map((message) =>
+      forumThreadPost.messages?.map((message) =>
         Prisma.validator<Prisma.MessageCreateManyInput>()({
           id: message.id,
           author: message.author,
           userId: message.userId,
           content: message.content,
           timestamp: message.timestamp,
-          threadId: forumPost.id,
+          threadId: forumThreadPost.id,
         })
       ) ?? [];
 
     const emojiData =
-      forumPost.messages?.flatMap((message) =>
+      forumThreadPost.messages?.flatMap((message) =>
         message.emojis.map((emoji) => ({
           id: `${emoji.name}-${message.id}`,
           name: emoji.name,
@@ -172,7 +172,7 @@ async function processThreadsToDB<
       ) ?? [];
 
     const imageData =
-      forumPost.messages?.flatMap((message) =>
+      forumThreadPost.messages?.flatMap((message) =>
         message.images.map((url, index) => ({
           id: `${message.id}-image-#${index}`,
           url: url,
@@ -213,9 +213,76 @@ async function processThreadsToDB<
   });
 }
 
-// I want the function to infer the type of the messages
-function processMessagesToDB<
-  Messages extends string | Collection<string, Message<true>>
+async function processMessagesToDB<
+  Messages extends Collection<string, Message<true>>
 >(messages: Messages) {
   if (!messages) return;
+
+  for (const message of messages.values()) {
+    const {
+      id: messageId,
+      author: { username: messageAuthor, id: messageUserId },
+      content: messageContent,
+      createdTimestamp,
+      thread,
+      attachments,
+      reactions,
+    } = message;
+    const messageTimestamp = createdTimestamp.toString();
+    const threadId = thread?.id;
+    const messageImages = attachments.map((a) => a.url);
+    const messageEmojis = reactions.cache.map((r) => r.emoji);
+
+    if (!isString(threadId) || !thread)
+      throw new Error("Failed to parse message data");
+
+    const messageData = {
+      id: messageId,
+      author: messageAuthor,
+      userId: messageUserId,
+      content: messageContent,
+      timestamp: messageTimestamp,
+      threadId: threadId,
+    };
+
+    const emojiData = messageEmojis.map((emoji) => ({
+      id: `${emoji.name}-${messageId}`,
+      name: emoji.name,
+      animated: emoji.animated ?? false,
+      identifier: emoji.identifier,
+      messageId: messageId,
+    }));
+
+    const imageData = messageImages.map((url, index) => ({
+      id: `${messageId}-image-#${index}`,
+      url: url,
+      messageId: messageId,
+    }));
+
+    const transactionQueries = [
+      prisma.message.upsert({
+        create: messageData,
+        update: messageData,
+        where: { id: messageId },
+      }),
+      ...emojiData.map((emoji) =>
+        prisma.emoji.upsert({
+          create: emoji,
+          update: emoji,
+          where: { id: emoji.id },
+        })
+      ),
+      ...imageData.map((image) =>
+        prisma.image.upsert({
+          create: image,
+          update: image,
+          where: { id: image.id },
+        })
+      ),
+    ];
+
+    for (const query of transactionQueries) {
+      await prisma.$transaction([query]);
+    }
+  }
 }
