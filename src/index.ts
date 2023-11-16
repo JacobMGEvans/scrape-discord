@@ -80,7 +80,9 @@ async function fetchNewMessages(threadId: AnyThreadChannel<boolean>) {
     );
   }
 }
-
+/**
+ * !!! Refactor either this or processThreadsToDB to handle new Messages from all threads and not scrape all messages from all threads every time.
+ */
 async function fetchAllForumThreads(channelId: string, client: Client) {
   try {
     const channel = await client.channels.fetch(channelId);
