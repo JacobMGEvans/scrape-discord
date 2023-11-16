@@ -6,6 +6,7 @@ import {
   AnyThreadChannel,
 } from "discord.js";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { isString } from "./helpers.ts";
 
 const server = fastify();
 const prisma = new PrismaClient();
@@ -27,13 +28,10 @@ const startServer = async () => {
   // Listen to new message events
   client.on("threadUpdate", async (oldThread, newThread) => {
     // check if thread messages are new or updated then update the DB
+    // Not sure if this checking the cache will work
     if (oldThread.messages.cache.size !== newThread.messages.cache.size) {
       //!!!! Fetch the thread messages and store/update them in the DB
-      await fetchNewMessages(newThread, client);
-    }
-    if (newThread.type === ChannelType.PublicThread) {
-      // Fetch the channel messages and store/update them in the DB
-      await fetchAllChannelMessages(newThread.id, client);
+      await checkNewMessages(newThread);
     }
   });
 };
@@ -41,7 +39,7 @@ startServer();
 
 server.get("/manual-scrape", async (_, reply) => {
   try {
-    const forumPosts = await fetchAllChannelMessages(FORUM_CHANNEL_Id, client);
+    const forumPosts = await fetchAllForumThreads(FORUM_CHANNEL_Id, client);
     return JSON.stringify(forumPosts, null, 2);
   } catch (error) {
     reply.status(500);
@@ -52,20 +50,21 @@ server.get("/manual-scrape", async (_, reply) => {
 /**
  * ! This function is not complete, it needs to be used up update the DB
  */
-async function fetchNewMessages(
-  threadId: AnyThreadChannel<boolean>,
-  client: Client
-) {
+async function checkNewMessages(threadId: AnyThreadChannel<boolean>) {
   if (!threadId.lastMessageId) return;
-  const messages = await threadId.messages.fetch({
-    limit: 100,
-    after: threadId.lastMessageId,
-  });
 
-  // check if messages are new or updated then update the DB
+  try {
+    const messages = await threadId.messages.fetch({
+      limit: 100,
+      after: threadId.lastMessageId,
+    });
+    return messages;
+  } catch (error) {
+    return JSON.stringify(`Failed to fetch channel messages ${error}`, null, 2);
+  }
 }
 
-async function fetchAllChannelMessages(channelId: string, client: Client) {
+async function fetchAllForumThreads(channelId: string, client: Client) {
   try {
     const channel = await client.channels.fetch(channelId);
     if (!channel || channel.type !== ChannelType.GuildForum)
@@ -81,133 +80,118 @@ async function fetchAllChannelMessages(channelId: string, client: Client) {
       })
     );
 
-    return await somethingDBRelated(threads);
+    return await processThreadsToDBOperations(threads);
   } catch (error) {
     throw JSON.stringify(`Failed to fetch channel messages ${error}`, null, 2);
   }
 }
 
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-//*** Rename Function */
-async function somethingDBRelated(
+async function processThreadsToDBOperations(
   threads: (AnyThreadChannel<boolean> | null)[]
 ) {
-  /**
-   * !!!! This needs to be batched, so we dont get rated limited by Discord
-   */
-  return await Promise.all(
-    threads.map(async (thread) => {
-      const messages = await thread?.messages.fetch();
-      const threadId = thread?.id;
-      const threadName = thread?.name;
-      const threadOwnerId = thread?.ownerId;
-      const lastMessageId = thread?.lastMessageId;
-      if (
-        !isString(threadId) ||
-        !isString(threadName) ||
-        !isString(threadOwnerId) ||
-        !isString(lastMessageId)
-      )
-        throw new Error("Failed to parse thread data");
+  const processedThreads = threads.filter(
+    (thread) => thread !== null
+  ) as AnyThreadChannel<boolean>[];
 
-      const forumPost = {
-        id: threadId,
-        threadPostTitle: threadName,
-        author: threadOwnerId,
-        lastMessageId: String(lastMessageId),
-        messages: messages?.map((m) => ({
-          id: m.id,
-          author: m.author.username,
-          userId: m.author.id,
-          content: m.content,
-          emojis: m.reactions.cache.map((r) => r.emoji),
-          images: m.attachments.map((a) => a.url),
-          timestamp: String(m.createdTimestamp),
-        })),
-      };
+  return processedThreads.map(async (thread) => {
+    if (!thread) return null;
 
-      const threadData = Prisma.validator<Prisma.ThreadCreateInput>()({
-        id: forumPost.id,
-        threadPostTitle: forumPost.threadPostTitle,
-        author: forumPost.author,
-      });
+    const messages = await thread.messages.fetch();
+    const threadId = thread.id;
+    const threadName = thread.name;
+    const threadOwnerId = thread.ownerId;
+    const lastMessageId = thread.lastMessageId;
+    if (
+      !isString(threadId) ||
+      !isString(threadName) ||
+      !isString(threadOwnerId) ||
+      !isString(lastMessageId)
+    )
+      throw new Error("Failed to parse thread data");
 
-      const messageData =
-        forumPost.messages?.map((message) =>
-          Prisma.validator<Prisma.MessageCreateManyInput>()({
-            id: message.id,
-            author: message.author,
-            userId: message.userId,
-            content: message.content,
-            timestamp: message.timestamp,
-            threadId: forumPost.id,
-          })
-        ) ?? [];
+    const forumPost = {
+      id: threadId,
+      threadPostTitle: threadName,
+      author: threadOwnerId,
+      lastMessageId: String(lastMessageId),
+      messages: messages?.map((m) => ({
+        id: m.id,
+        author: m.author.username,
+        userId: m.author.id,
+        content: m.content,
+        emojis: m.reactions.cache.map((r) => r.emoji),
+        images: m.attachments.map((a) => a.url),
+        timestamp: String(m.createdTimestamp),
+      })),
+    };
 
-      const emojiData =
-        forumPost.messages?.flatMap((message) =>
-          message.emojis.map((emoji) => ({
-            id: `${emoji.name}-${message.id}`,
-            name: emoji.name,
-            animated: emoji.animated ?? false,
-            identifier: emoji.identifier,
-            messageId: message.id,
-          }))
-        ) ?? [];
+    const threadData = Prisma.validator<Prisma.ThreadCreateInput>()({
+      id: forumPost.id,
+      threadPostTitle: forumPost.threadPostTitle,
+      author: forumPost.author,
+    });
 
-      const imageData =
-        forumPost.messages?.flatMap((message) =>
-          message.images.map((url, index) => ({
-            id: `${message.id}-image-#${index}`,
-            url: url,
-            messageId: message.id,
-          }))
-        ) ?? [];
-
-      const transactionQueries = [];
-      transactionQueries.push(
-        prisma.thread.upsert({
-          create: threadData,
-          update: threadData,
-          where: { id: threadData.id },
+    const messageData =
+      forumPost.messages?.map((message) =>
+        Prisma.validator<Prisma.MessageCreateManyInput>()({
+          id: message.id,
+          author: message.author,
+          userId: message.userId,
+          content: message.content,
+          timestamp: message.timestamp,
+          threadId: forumPost.id,
         })
-      );
+      ) ?? [];
 
-      messageData.forEach((message) => {
-        transactionQueries.push(
-          prisma.message.upsert({
-            create: message,
-            update: message,
-            where: { id: message.id },
-          })
-        );
-      });
+    const emojiData =
+      forumPost.messages?.flatMap((message) =>
+        message.emojis.map((emoji) => ({
+          id: `${emoji.name}-${message.id}`,
+          name: emoji.name,
+          animated: emoji.animated ?? false,
+          identifier: emoji.identifier,
+          messageId: message.id,
+        }))
+      ) ?? [];
 
-      emojiData.forEach((emoji) => {
-        transactionQueries.push(
-          prisma.emoji.upsert({
-            create: emoji,
-            update: emoji,
-            where: { id: emoji.id },
-          })
-        );
-      });
+    const imageData =
+      forumPost.messages?.flatMap((message) =>
+        message.images.map((url, index) => ({
+          id: `${message.id}-image-#${index}`,
+          url: url,
+          messageId: message.id,
+        }))
+      ) ?? [];
 
-      imageData.forEach((image) => {
-        transactionQueries.push(
-          prisma.image.upsert({
-            create: image,
-            update: image,
-            where: { id: image.id },
-          })
-        );
-      });
+    const transactionQueries = [
+      prisma.thread.upsert({
+        create: threadData,
+        update: threadData,
+        where: { id: threadData.id },
+      }),
+      ...messageData.map((message) =>
+        prisma.message.upsert({
+          create: message,
+          update: message,
+          where: { id: message.id },
+        })
+      ),
+      ...emojiData.map((emoji) =>
+        prisma.emoji.upsert({
+          create: emoji,
+          update: emoji,
+          where: { id: emoji.id },
+        })
+      ),
+      ...imageData.map((image) =>
+        prisma.image.upsert({
+          create: image,
+          update: image,
+          where: { id: image.id },
+        })
+      ),
+    ];
 
-      await prisma.$transaction(transactionQueries);
-
-      return forumPost;
-    })
-  );
+    return await prisma.$transaction(transactionQueries);
+  });
 }
