@@ -1,6 +1,7 @@
 import { Client, SlashCommandBuilder } from "discord.js";
-import { fetchAllForumThreads, processThreadsToDB } from "../index.ts";
 import { env } from "../helpers.ts";
+import { processThreadsToDB } from "../controllers/processors.ts";
+import { fetchAllForumThreads } from "../controllers/fetches.ts";
 
 export const fetchForumCommand = new SlashCommandBuilder()
   .setName("scrape-forum")
@@ -16,9 +17,14 @@ export async function scrapeForum(client: Client) {
       interaction.commandName === "scrape-forum"
     ) {
       try {
+        await interaction.deferReply();
         const forumPosts = await fetchAllForumThreads(env.FORUM, client);
+
         const processedThreads = await processThreadsToDB(forumPosts);
         console.log(JSON.stringify(processedThreads, null, 2));
+        await interaction.editReply({
+          content: `Forum Scraped ${forumPosts.length} threads and ${processedThreads.length} processed`,
+        });
       } catch (error) {
         throw new Error(`Failed to fetch channel messages ${error}`);
       }

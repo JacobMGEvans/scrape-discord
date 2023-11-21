@@ -1,6 +1,11 @@
 import { AnyThreadChannel, Message } from "discord.js";
 import { z } from "zod";
 
+export async function cooldown(ms: number) {
+  // Block the event loop for the specified amount of time
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function isString(value: unknown): value is string {
   return typeof value === "string";
 }

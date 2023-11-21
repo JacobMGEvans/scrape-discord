@@ -1,8 +1,8 @@
 // setup event listener for all new messages in forum channel
 
 import { AnyThreadChannel, Client, Collection } from "discord.js";
-import { processMessagesToDB } from "../index.ts";
 import { isNewMessageInThread, env } from "../helpers.ts";
+import { processMessagesToDB } from "../controllers/processors.ts";
 // Listen to new message events
 export async function threadUpdatedListener(client: Client) {
   client.on("threadUpdate", async (oldThread, newThread) => {
