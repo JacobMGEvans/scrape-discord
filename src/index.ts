@@ -1,13 +1,4 @@
-import {
-  Client,
-  ChannelType,
-  ForumChannel,
-  REST,
-  Events,
-  Routes,
-  GatewayIntentBits,
-} from "discord.js";
-import { cooldown, isString } from "./helpers.ts";
+import { Client, REST, Events, Routes, GatewayIntentBits } from "discord.js";
 import { commands, slashCommands } from "./commands/index.ts";
 import { listeners } from "./events/index.ts";
 import { env } from "./helpers.ts";

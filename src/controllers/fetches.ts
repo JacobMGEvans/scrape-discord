@@ -1,4 +1,9 @@
-import { ForumChannel } from "discord.js";
+import {
+  AnyThreadChannel,
+  Collection,
+  ForumChannel,
+  Message,
+} from "discord.js";
 import { cooldown } from "../helpers.ts";
 import { Client } from "discord.js";
 import { ChannelType } from "discord.js";
@@ -26,5 +31,21 @@ export async function fetchAllForumThreads(channelId: string, client: Client) {
     return threads;
   } catch (error) {
     throw JSON.stringify(`Failed to fetch channel messages ${error}`, null, 2);
+  }
+}
+
+export async function fetchNewMessages(thread: AnyThreadChannel<boolean>) {
+  if (!thread.lastMessageId) return;
+
+  try {
+    const messages = await thread.messages.fetch({
+      limit: 100,
+      after: thread.lastMessageId,
+    });
+    return messages;
+  } catch (error) {
+    throw new Error(
+      JSON.stringify(`Failed to fetch NEW channel messages ${error}`, null, 2)
+    );
   }
 }

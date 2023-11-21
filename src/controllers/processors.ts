@@ -1,6 +1,7 @@
 import { AnyThreadChannel, Collection, Message } from "discord.js";
 import { isString } from "../helpers.ts";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { fetchNewMessages } from "./fetches.ts";
 
 const prisma = new PrismaClient();
 
@@ -14,7 +15,9 @@ export async function processThreadsToDB<
   return processedThreads.map(async (thread) => {
     if (!thread) return null;
 
-    const messages = await thread.messages.fetch();
+    const messages =
+      (await fetchNewMessages(thread)) ?? (await thread.messages.fetch());
+
     const threadId = thread.id;
     const threadName = thread.name;
     const threadOwnerId = thread.ownerId;
