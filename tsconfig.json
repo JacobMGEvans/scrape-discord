@@ -16,5 +16,5 @@
     "types": ["node"]
   },
   "files": ["src/index.ts", "src/helpers.ts"],
-  "include": ["src/commands/**.ts"]
+  "include": ["src/commands/**.ts", "src/events/**.ts"]
 }

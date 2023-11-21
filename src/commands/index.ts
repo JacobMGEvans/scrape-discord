@@ -1,8 +1,8 @@
-import { Client } from "discord.js";
+import { Client, SlashCommandBuilder } from "discord.js";
 import { scrapeForum, fetchForumCommand } from "./scrape-forum.ts";
 
-export const slashCommands = (client: Client): void => {
+export function slashCommands(client: Client) {
   scrapeForum(client);
-};
+}
 
-export const commands = [fetchForumCommand];
+export const commands: SlashCommandBuilder[] = [fetchForumCommand];

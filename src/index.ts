@@ -10,38 +10,35 @@ import {
   Routes,
 } from "discord.js";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { isNewMessageInThread, isString } from "./helpers.ts";
+import { isString } from "./helpers.ts";
 import { commands, slashCommands } from "./commands/index.ts";
-
-if (!process.env.DISCORD_TOKEN)
-  throw new Error("Missing environment variables");
+import { listeners } from "./events/index.ts";
+import { env } from "./helpers.ts";
 
 const prisma = new PrismaClient();
 const client = new Client({
   intents: ["Guilds", "GuildMessages"],
 });
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({ version: "10" }).setToken(env.TOKEN);
 
-await client.login(process.env.DISCORD_TOKEN);
-await registerSlashCmds();
-slashCommands(client);
-
-// Prepare the bot to onnect to the server
+// Prepare the bot to connect to the server
 client.once(Events.ClientReady, (c) => {
   console.log("Starting server...");
   console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 
+await client.login(env.TOKEN);
+await registerSlashCmds();
+slashCommands(client);
+listeners(client);
+
 async function registerSlashCmds() {
-  if (!process.env.CLIENT_ID || !process.env.SERVER_ID)
+  if (!env.CLIENT_ID || !env.SERVER_ID)
     throw new Error("Missing environment variables");
   // attempt to register slash commands
   try {
     await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.SERVER_ID
-      ),
+      Routes.applicationGuildCommands(env.CLIENT_ID, env.SERVER_ID),
       { body: commands }
     );
     console.log("All /slash commands registered");
@@ -51,47 +48,6 @@ async function registerSlashCmds() {
   console.log("Slash commands registered successfully");
 }
 
-// setup event listener for all new messages in forum channel
-// Listen to new message events
-client.on("threadUpdate", async (oldThread, newThread) => {
-  console.log(
-    "THREAD UPDATE EVENT",
-    JSON.stringify(
-      {
-        oldThread,
-        newThread,
-      },
-      null,
-      2
-    )
-  );
-
-  if (!isNewMessageInThread(oldThread, newThread)) return;
-
-  const newMessages = await fetchNewMessages(newThread);
-
-  newMessages instanceof Collection
-    ? processMessagesToDB(newMessages)
-    : new Error("Failed process new messages to DB");
-});
-
-export async function fetchNewMessages(threadId: AnyThreadChannel<boolean>) {
-  if (!threadId.lastMessageId) return;
-
-  try {
-    const messages = await threadId.messages.fetch({
-      limit: 100,
-      after: threadId.lastMessageId,
-    });
-    return messages;
-  } catch (error) {
-    return JSON.stringify(
-      `Failed to fetch NEW channel messages ${error}`,
-      null,
-      2
-    );
-  }
-}
 /**
  * !!! Refactor either this or processThreadsToDB to handle new Messages from all threads and not scrape all messages from all threads every time.
  */
@@ -227,7 +183,7 @@ export async function processThreadsToDB<
   });
 }
 
-async function processMessagesToDB<
+export async function processMessagesToDB<
   Messages extends Collection<string, Message<true>>
 >(messages: Messages) {
   if (!messages) return;

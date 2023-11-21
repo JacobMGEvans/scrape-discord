@@ -1,8 +1,6 @@
 import { AnyThreadChannel, Message } from "discord.js";
+import { z } from "zod";
 
-/**
- * !! IF I MAKE MORE THAN ONE OF THESE TYPE HELPERS I AM INSTALLING ZOD
- */
 export function isString(value: unknown): value is string {
   return typeof value === "string";
 }
@@ -24,3 +22,23 @@ export function isNewMessageInThread(
 
   return false;
 }
+
+const envSchema = z.object({
+  TOKEN: z.string(),
+  FORUM: z.string(),
+  SERVER_ID: z.string(),
+  CLIENT_ID: z.string(),
+  DATABASE_URL: z.string().url(),
+});
+
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  console.error(
+    "❌ Invalid environment variables:",
+    JSON.stringify(parsed.error.format(), null, 2)
+  );
+  process.exit(1);
+}
+
+export const env = parsed.data;
