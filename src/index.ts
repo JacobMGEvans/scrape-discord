@@ -1,4 +1,3 @@
-import fastify from "fastify";
 import {
   Client,
   ChannelType,
@@ -6,64 +5,77 @@ import {
   AnyThreadChannel,
   Message,
   Collection,
+  REST,
+  Events,
+  Routes,
 } from "discord.js";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { isNewMessageInThread, isString } from "./helpers.ts";
+import { commands, slashCommands } from "./commands/index.ts";
 
-const server = fastify();
+if (!process.env.DISCORD_TOKEN)
+  throw new Error("Missing environment variables");
+
 const prisma = new PrismaClient();
-
-const FORUM_CHANNEL_Id = "1156708804134703205"; //! fake servers forum channel id
 const client = new Client({
   intents: ["Guilds", "GuildMessages"],
 });
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
 await client.login(process.env.DISCORD_TOKEN);
+await registerSlashCmds();
+slashCommands(client);
 
-const startServer = async () => {
-  try {
-    await server.listen({ port: 4321 });
-    console.log(`Server listening on`, server.server.address());
-  } catch (error) {
-    console.error("Error starting server:", error);
-  }
-
-  // Listen to new message events
-  client.on("threadUpdate", async (oldThread, newThread) => {
-    console.log(
-      "THREAD UPDATE EVENT",
-      JSON.stringify(
-        {
-          oldThread,
-          newThread,
-        },
-        null,
-        2
-      )
-    );
-
-    if (!isNewMessageInThread(oldThread, newThread)) return;
-
-    const newMessages = await fetchNewMessages(newThread);
-
-    newMessages instanceof Collection
-      ? processMessagesToDB(newMessages)
-      : new Error("Failed process new messages to DB");
-  });
-};
-startServer();
-
-server.get("/manually-scrape-forum", async (_, reply) => {
-  try {
-    const forumPosts = await fetchAllForumThreads(FORUM_CHANNEL_Id, client);
-    const processedThreads = await processThreadsToDB(forumPosts);
-    return JSON.stringify(processedThreads, null, 2);
-  } catch (error) {
-    reply.status(500);
-    return { error: `Failed to fetch channel messages ${error}` };
-  }
+// Prepare the bot to onnect to the server
+client.once(Events.ClientReady, (c) => {
+  console.log("Starting server...");
+  console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 
-async function fetchNewMessages(threadId: AnyThreadChannel<boolean>) {
+async function registerSlashCmds() {
+  if (!process.env.CLIENT_ID || !process.env.SERVER_ID)
+    throw new Error("Missing environment variables");
+  // attempt to register slash commands
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.SERVER_ID
+      ),
+      { body: commands }
+    );
+    console.log("All /slash commands registered");
+  } catch (error) {
+    console.error("ERROR:", error);
+  }
+  console.log("Slash commands registered successfully");
+}
+
+// setup event listener for all new messages in forum channel
+// Listen to new message events
+client.on("threadUpdate", async (oldThread, newThread) => {
+  console.log(
+    "THREAD UPDATE EVENT",
+    JSON.stringify(
+      {
+        oldThread,
+        newThread,
+      },
+      null,
+      2
+    )
+  );
+
+  if (!isNewMessageInThread(oldThread, newThread)) return;
+
+  const newMessages = await fetchNewMessages(newThread);
+
+  newMessages instanceof Collection
+    ? processMessagesToDB(newMessages)
+    : new Error("Failed process new messages to DB");
+});
+
+export async function fetchNewMessages(threadId: AnyThreadChannel<boolean>) {
   if (!threadId.lastMessageId) return;
 
   try {
@@ -83,7 +95,7 @@ async function fetchNewMessages(threadId: AnyThreadChannel<boolean>) {
 /**
  * !!! Refactor either this or processThreadsToDB to handle new Messages from all threads and not scrape all messages from all threads every time.
  */
-async function fetchAllForumThreads(channelId: string, client: Client) {
+export async function fetchAllForumThreads(channelId: string, client: Client) {
   try {
     const channel = await client.channels.fetch(channelId);
     if (!channel || channel.type !== ChannelType.GuildForum)
@@ -105,7 +117,7 @@ async function fetchAllForumThreads(channelId: string, client: Client) {
   }
 }
 
-async function processThreadsToDB<
+export async function processThreadsToDB<
   Threads extends (AnyThreadChannel<boolean> | null)[]
 >(threads: Threads) {
   const processedThreads = threads.filter(

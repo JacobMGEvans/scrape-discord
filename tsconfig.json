@@ -15,5 +15,6 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "files": ["src/index.ts", "src/helpers.ts"]
+  "files": ["src/index.ts", "src/helpers.ts"],
+  "include": ["src/commands/**.ts"]
 }
