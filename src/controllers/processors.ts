@@ -113,6 +113,14 @@ export async function processThreadsToDB<
       ),
     ];
 
+    console.log({
+      transactionQueries,
+      threadData,
+      messageData,
+      emojiData,
+      imageData,
+    });
+
     return await prisma.$transaction(transactionQueries);
   });
 }
