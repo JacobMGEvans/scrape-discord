@@ -21,7 +21,6 @@ export async function scrapeForum(client: Client) {
         const forumPosts = await fetchAllForumThreads(env.FORUM, client);
 
         const processedThreads = await processThreadsToDB(forumPosts);
-        console.log(JSON.stringify(processedThreads, null, 2));
         await interaction.editReply({
           content: `Forum Scraped ${forumPosts.length} threads and ${processedThreads.length} processed`,
         });

@@ -13,9 +13,20 @@ model Thread {
   threadPostTitle String?   @db.LongText
   author          String?
   lastMessageId   String?
+  tags            Tag[]
   messages        Message[]
 
   @@fulltext([threadPostTitle])
+}
+
+model Tag {
+  id       String   @id
+  name     String?
+  tagId    String
+  threadId String
+  thread   Thread   @relation(fields: [threadId], references: [id])
+
+  @@index([threadId])
 }
 
 model Message {

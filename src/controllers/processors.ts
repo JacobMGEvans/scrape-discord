@@ -35,6 +35,7 @@ export async function processThreadsToDB<
       threadPostTitle: threadName,
       author: threadOwnerId,
       lastMessageId,
+      tags: thread.appliedTags,
       messages: messages?.map((m) => ({
         id: m.id,
         author: m.author.username,
@@ -52,6 +53,12 @@ export async function processThreadsToDB<
       author: forumThreadPost.author,
       lastMessageId,
     });
+
+    const tagsData = forumThreadPost.tags.map((tag) => ({
+      id: `${tag}-${threadId}`,
+      tagId: tag,
+      threadId,
+    }));
 
     const messageData =
       forumThreadPost.messages?.map((message) =>
@@ -91,6 +98,15 @@ export async function processThreadsToDB<
         update: threadData,
         where: { id: threadData.id },
       }),
+      ...tagsData.map((tag) =>
+        prisma.tag.upsert({
+          create: tag,
+          update: tag,
+          where: {
+            id: tag.id,
+          },
+        })
+      ),
       ...messageData.map((message) =>
         prisma.message.upsert({
           create: message,
