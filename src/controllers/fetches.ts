@@ -1,12 +1,10 @@
-import {
-  AnyThreadChannel,
-  Collection,
-  ForumChannel,
-  Message,
-} from "discord.js";
+import { AnyThreadChannel, ForumChannel } from "discord.js";
 import { cooldown } from "../helpers.ts";
 import { Client } from "discord.js";
 import { ChannelType } from "discord.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 /**
  * !!! Refactor either this or processThreadsToDB to handle new Messages from all threads and not scrape all messages from all threads every time.
@@ -35,12 +33,22 @@ export async function fetchAllForumThreads(channelId: string, client: Client) {
 }
 
 export async function fetchNewMessages(thread: AnyThreadChannel<boolean>) {
-  if (!thread.lastMessageId) return;
+  const lastMessageInDB = await prisma.thread
+    .findUnique({
+      where: {
+        id: thread.id,
+      },
+      select: {
+        lastMessageId: true,
+      },
+    })
+    .then((res) => res?.lastMessageId);
+  if (lastMessageInDB === null) return;
 
   try {
     const messages = await thread.messages.fetch({
       limit: 100,
-      after: thread.lastMessageId,
+      after: lastMessageInDB,
     });
     return messages;
   } catch (error) {

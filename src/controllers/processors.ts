@@ -1,5 +1,5 @@
 import { AnyThreadChannel, Collection, Message } from "discord.js";
-import { isString } from "../helpers.ts";
+import { cooldown, isString } from "../helpers.ts";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { fetchNewMessages } from "./fetches.ts";
 
@@ -34,7 +34,7 @@ export async function processThreadsToDB<
       id: threadId,
       threadPostTitle: threadName,
       author: threadOwnerId,
-      lastMessageId: String(lastMessageId),
+      lastMessageId,
       messages: messages?.map((m) => ({
         id: m.id,
         author: m.author.username,
@@ -50,6 +50,7 @@ export async function processThreadsToDB<
       id: forumThreadPost.id,
       threadPostTitle: forumThreadPost.threadPostTitle,
       author: forumThreadPost.author,
+      lastMessageId,
     });
 
     const messageData =
@@ -113,14 +114,7 @@ export async function processThreadsToDB<
       ),
     ];
 
-    console.log({
-      transactionQueries,
-      threadData,
-      messageData,
-      emojiData,
-      imageData,
-    });
-
+    cooldown(500);
     return await prisma.$transaction(transactionQueries);
   });
 }
@@ -193,8 +187,7 @@ export async function processMessagesToDB<
       ),
     ];
 
-    for (const query of transactionQueries) {
-      await prisma.$transaction([query]);
-    }
+    cooldown(500);
+    await prisma.$transaction(transactionQueries);
   }
 }

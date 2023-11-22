@@ -23,14 +23,14 @@ devDependencies:
     specifier: ^20.9.0
     version: 20.9.0
   discord-api-types:
-    specifier: ^0.37.63
-    version: 0.37.63
+    specifier: ^0.37.64
+    version: 0.37.64
   prisma:
     specifier: ^5.6.0
     version: 5.6.0
   typescript:
-    specifier: ^5.2.2
-    version: 5.2.2
+    specifier: ^5.3.2
+    version: 5.3.2
 
 packages:
 
@@ -230,8 +230,8 @@ packages:
     resolution: {integrity: sha512-o/dXNFfhBpYHpQFdT6FWzeO7pKc838QeeZ9d91CfVAtpr5XLK4B/zYxQbYgPdoMiTDvJfzcsLW5naXgmHGDNXw==}
     dev: false
 
-  /discord-api-types@0.37.63:
-    resolution: {integrity: sha512-WbEDWj/1JGCIC1oCMIC4z9XbYY8PrWpV5eqFFQymJhJlHMqgIjqoYbU812X5oj5cwbRrEh6Va4LNLumB2Nt6IQ==}
+  /discord-api-types@0.37.64:
+    resolution: {integrity: sha512-9aS+QuoNj+4e9d5uDKfds1DCpQLYn/mHx+M8OFHZ/ZZJVadZJEo275uBOaSsw5KGYGsZ4hxMzlOkIxnWirgqKA==}
     dev: true
 
   /discord.js@14.14.1:
@@ -289,8 +289,8 @@ packages:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
     dev: false
 
-  /typescript@5.2.2:
-    resolution: {integrity: sha512-mI4WrpHsbCIcwT9cF4FZvr80QUeKvsUsUvKDoR+X/7XHQH98xYD8YHZg7ANtz2GtZt/CBq2QJ0thkGJMHfqc1w==}
+  /typescript@5.3.2:
+    resolution: {integrity: sha512-6l+RyNy7oAHDfxC4FzSJcz9vnjTKxrLpDG5M2Vu4SHRVNg6xzqZp6LYSR9zjqQTu8DU/f5xwxUdADOkbrIX2gQ==}
     engines: {node: '>=14.17'}
     hasBin: true
     dev: true
