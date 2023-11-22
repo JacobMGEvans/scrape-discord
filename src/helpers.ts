@@ -15,6 +15,11 @@ export function isNewMessage(message: Message): boolean {
   return message.id > message.thread.lastMessageId;
 }
 
+const NullableUndefined = z.union([z.null(), z.undefined()]);
+export function isNullOrUndefined(value: unknown): value is null | undefined {
+  return NullableUndefined.safeParse(value).success;
+}
+
 export function isNewMessageInThread(
   oldThread: AnyThreadChannel<boolean>,
   newThread: AnyThreadChannel<boolean>

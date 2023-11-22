@@ -1,5 +1,5 @@
 import { AnyThreadChannel, ForumChannel } from "discord.js";
-import { cooldown } from "../helpers.ts";
+import { cooldown, isNullOrUndefined } from "../helpers.ts";
 import { Client } from "discord.js";
 import { ChannelType } from "discord.js";
 import { PrismaClient } from "@prisma/client";
@@ -43,7 +43,8 @@ export async function fetchNewMessages(thread: AnyThreadChannel<boolean>) {
       },
     })
     .then((res) => res?.lastMessageId);
-  if (lastMessageInDB === null) return;
+
+  if (isNullOrUndefined(lastMessageInDB)) return;
 
   try {
     const messages = await thread.messages.fetch({
