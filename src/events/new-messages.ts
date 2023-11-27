@@ -1,7 +1,5 @@
 import { ChannelType, Client, Collection, Message } from "discord.js";
-import { env } from "../helpers.ts";
-import { fetchNewMessages } from "../controllers/fetches.ts";
-import { processMessagesToDB } from "../controllers/processors.ts";
+import { env, prisma } from "../helpers.ts";
 
 export async function handleMessageCreated(client: Client) {
   client.on("messageCreate", async (message) => {
@@ -13,14 +11,19 @@ export async function handleMessageCreated(client: Client) {
     )
       return console.error("Message not in Support forum");
 
-    // Make the message a Collection of one message so we can reuse the processMessagesToDB function
-    const messageCollection = new Collection<string, Message<boolean>>();
-    messageCollection.set(message.id, message);
+    console.log("MESSAGE", message.content);
 
-    const processedMessage =
-      (await processMessagesToDB(messageCollection)) ??
-      new Error("Failed to fetch new messages in MessageCreate event");
+    const processedMessage = await prisma.message.create({
+      data: {
+        id: message.id,
+        author: message.author.username,
+        userId: message.author.id,
+        content: message.content,
+        timestamp: message.createdTimestamp.toString(),
+        threadId: message.channelId,
+      },
+    });
 
-    console.log(JSON.stringify(processedMessage, null, 2));
+    console.log("MESSAGE CREATED:", JSON.stringify(processedMessage, null, 2));
   });
 }
