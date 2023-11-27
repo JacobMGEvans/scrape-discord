@@ -1,5 +1,9 @@
-import { AnyThreadChannel, Message } from "discord.js";
+import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+
+import type { AnyThreadChannel, Message } from "discord.js";
+
+export const prisma = new PrismaClient();
 
 export async function cooldown(ms: number) {
   // Block the event loop for the specified amount of time
@@ -10,9 +14,20 @@ export function isString(value: unknown): value is string {
   return typeof value === "string";
 }
 
-export function isNewMessage(message: Message): boolean {
-  if (!message.thread || !message.thread.lastMessageId) return false;
-  return message.id > message.thread.lastMessageId;
+export async function isNewMessage(message: Message) {
+  const lastMessageId = await prisma.thread
+    .findUnique({
+      where: {
+        id: message.channelId,
+      },
+      select: {
+        lastMessageId: true,
+      },
+    })
+    .then((res) => res?.lastMessageId);
+
+  if (isNullOrUndefined(lastMessageId)) return false;
+  return message.id > lastMessageId;
 }
 
 const NullableUndefined = z.union([z.null(), z.undefined()]);

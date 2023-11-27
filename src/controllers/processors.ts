@@ -1,9 +1,7 @@
-import { AnyThreadChannel, Collection, Message } from "discord.js";
-import { cooldown, isString } from "../helpers.ts";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { cooldown, isString, prisma } from "../helpers.ts";
+import { Prisma } from "@prisma/client";
 import { fetchNewMessages } from "./fetches.ts";
-
-const prisma = new PrismaClient();
+import type { AnyThreadChannel, Collection, Message } from "discord.js";
 
 export async function processThreadsToDB<
   Threads extends (AnyThreadChannel<boolean> | null)[]

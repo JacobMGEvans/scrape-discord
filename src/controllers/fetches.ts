@@ -1,15 +1,12 @@
-import {
+import { cooldown, isNullOrUndefined, prisma } from "../helpers.ts";
+import { Client, ChannelType } from "discord.js";
+
+import type {
   AnyThreadChannel,
   Collection,
   ForumChannel,
   Message,
 } from "discord.js";
-import { cooldown, isNullOrUndefined } from "../helpers.ts";
-import { Client } from "discord.js";
-import { ChannelType } from "discord.js";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
 
 /**
  * !!! Refactor either this or processThreadsToDB to handle new Messages from all threads and not scrape all messages from all threads every time.
