@@ -134,7 +134,7 @@ export async function processThreadsToDB<
 }
 
 export async function processMessagesToDB<
-  Messages extends Collection<string, Message<true>>
+  Messages extends Collection<string, Message<boolean>>
 >(messages: Messages) {
   if (!messages) return;
 
@@ -202,6 +202,6 @@ export async function processMessagesToDB<
     ];
 
     cooldown(500);
-    await prisma.$transaction(transactionQueries);
+    return await prisma.$transaction(transactionQueries);
   }
 }

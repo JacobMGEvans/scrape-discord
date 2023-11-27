@@ -5,16 +5,17 @@ import { processThreadsToDB } from "../controllers/processors.ts";
 export async function handleThreadUpdated(client: Client) {
   client.on("threadUpdate", async (oldThread, newThread) => {
     if (
-      newThread.type !== ChannelType.PublicThread ||
-      newThread.id !== env.FORUM
+      newThread.parentId !== env.FORUM ||
+      newThread.parent?.type !== ChannelType.GuildForum
     )
-      return;
+      return console.error("Thread not in Support forum");
+
     console.log(
       "THREAD UPDATE EVENT",
       JSON.stringify(
         {
-          oldThread,
-          newThread,
+          "***OLDTHREAD***": oldThread,
+          "***NEWTHREAD***": newThread,
         },
         null,
         2
