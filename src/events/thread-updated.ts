@@ -5,7 +5,7 @@ import { processThreadsToDB } from "../controllers/processors.ts";
 export async function handleThreadUpdated(client: Client) {
   client.on("threadUpdate", async (oldThread, newThread) => {
     if (
-      newThread.type !== ChannelType.PublicThread &&
+      newThread.type !== ChannelType.PublicThread ||
       newThread.id !== env.FORUM
     )
       return;

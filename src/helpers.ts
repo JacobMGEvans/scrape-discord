@@ -14,22 +14,6 @@ export function isString(value: unknown): value is string {
   return typeof value === "string";
 }
 
-export async function isNewMessage(message: Message) {
-  const lastMessageId = await prisma.thread
-    .findUnique({
-      where: {
-        id: message.channelId,
-      },
-      select: {
-        lastMessageId: true,
-      },
-    })
-    .then((res) => res?.lastMessageId);
-
-  if (isNullOrUndefined(lastMessageId)) return false;
-  return message.id > lastMessageId;
-}
-
 const NullableUndefined = z.union([z.null(), z.undefined()]);
 export function isNullOrUndefined(value: unknown): value is null | undefined {
   return NullableUndefined.safeParse(value).success;
