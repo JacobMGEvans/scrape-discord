@@ -1,6 +1,8 @@
 import { Client } from "discord.js";
-import { threadUpdatedListener } from "./new-message.ts";
+import { handleThreadUpdated } from "./thread-updated.ts";
+import { handleMessageCreated } from "./new-messages.ts";
 
 export function listeners(client: Client) {
-  threadUpdatedListener(client);
+  handleThreadUpdated(client);
+  handleMessageCreated(client);
 }

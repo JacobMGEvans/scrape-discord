@@ -1,4 +1,9 @@
-import { AnyThreadChannel, ForumChannel } from "discord.js";
+import {
+  AnyThreadChannel,
+  Collection,
+  ForumChannel,
+  Message,
+} from "discord.js";
 import { cooldown, isNullOrUndefined } from "../helpers.ts";
 import { Client } from "discord.js";
 import { ChannelType } from "discord.js";
@@ -32,7 +37,9 @@ export async function fetchAllForumThreads(channelId: string, client: Client) {
   }
 }
 
-export async function fetchNewMessages(thread: AnyThreadChannel<boolean>) {
+export async function fetchNewMessages(
+  thread: AnyThreadChannel<boolean>
+): Promise<Collection<string, Message<true>> | undefined> {
   const lastMessageInDB = await prisma.thread
     .findUnique({
       where: {

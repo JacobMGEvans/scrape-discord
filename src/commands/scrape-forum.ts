@@ -21,9 +21,13 @@ export async function scrapeForum(client: Client) {
         const forumPosts = await fetchAllForumThreads(env.FORUM, client);
 
         const processedThreads = await processThreadsToDB(forumPosts);
-        await interaction.editReply({
-          content: `Forum Scraped ${forumPosts.length} threads and ${processedThreads.length} processed`,
-        });
+
+        processedThreads.map(async (d) =>
+          console.dir(await d, { depth: Infinity })
+        ),
+          await interaction.editReply({
+            content: `Forum Scraped ${forumPosts.length} threads and ${processedThreads.length} processed`,
+          });
       } catch (error) {
         throw new Error(`Failed to fetch channel messages ${error}`);
       }
