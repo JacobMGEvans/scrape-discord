@@ -11,7 +11,19 @@ export async function handleMessageCreated(client: Client) {
     )
       return console.error("Message not in Support forum");
 
-    console.log("MESSAGE", message.content);
+    const imageData = message.attachments.map((attachment, index) => ({
+      id: `${message.id}-image-#${index}`,
+      url: attachment.url,
+      messageId: message.id,
+    }));
+
+    const emojiData = message.reactions.cache.map((reaction) => ({
+      id: `${reaction.emoji.name}-${message.id}`,
+      name: reaction.emoji.name,
+      animated: reaction.emoji.animated ?? false,
+      identifier: reaction.emoji.identifier,
+      messageId: message.id,
+    }));
 
     const processedMessage = await prisma.message.create({
       data: {
@@ -21,6 +33,12 @@ export async function handleMessageCreated(client: Client) {
         content: message.content,
         timestamp: message.createdTimestamp.toString(),
         threadId: message.channelId,
+        images: {
+          create: imageData,
+        },
+        emojis: {
+          create: emojiData,
+        },
       },
     });
 

@@ -150,8 +150,6 @@ export async function processMessagesToDB<
     } = message;
     const messageTimestamp = createdTimestamp.toString();
     const threadId = thread?.id;
-    const messageImages = attachments.map((a) => a.url);
-    const messageEmojis = reactions.cache.map((r) => r.emoji);
 
     if (!isString(threadId) || !thread)
       throw new Error("Failed to parse message data");
@@ -165,18 +163,18 @@ export async function processMessagesToDB<
       threadId: threadId,
     };
 
-    const emojiData = messageEmojis.map((emoji) => ({
-      id: `${emoji.name}-${messageId}`,
-      name: emoji.name,
-      animated: emoji.animated ?? false,
-      identifier: emoji.identifier,
-      messageId: messageId,
+    const emojiData = reactions.cache.map((reaction) => ({
+      id: `${reaction.emoji.name}-${message.id}`,
+      name: reaction.emoji.name,
+      animated: reaction.emoji.animated ?? false,
+      identifier: reaction.emoji.identifier,
+      messageId: message.id,
     }));
 
-    const imageData = messageImages.map((url, index) => ({
-      id: `${messageId}-image-#${index}`,
-      url: url,
-      messageId: messageId,
+    const imageData = attachments.map((attachment, index) => ({
+      id: `${message.id}-image-#${index}`,
+      url: attachment.url,
+      messageId: message.id,
     }));
 
     const transactionQueries = [
