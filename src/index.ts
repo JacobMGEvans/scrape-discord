@@ -9,6 +9,8 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildEmojisAndStickers,
   ],
 });
 const rest = new REST({ version: "10" }).setToken(env.TOKEN);
@@ -28,11 +30,10 @@ async function registerSlashCmds() {
       Routes.applicationGuildCommands(env.CLIENT_ID, env.SERVER_ID),
       { body: commands }
     );
-    console.log("All /slash commands registered");
+    console.log("All /slash commands registered successfully!");
   } catch (error) {
     console.error("ERROR:", error);
   }
-  console.log("Slash commands registered successfully");
 }
 
 await client.login(env.TOKEN);
