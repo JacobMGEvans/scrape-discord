@@ -15,7 +15,6 @@ const client = new Client({
 });
 const rest = new REST({ version: "10" }).setToken(env.TOKEN);
 
-// Prepare the bot to connect to the server
 client.once(Events.ClientReady, (c) => {
   console.log("Starting server...");
   console.log(`Ready! Logged in as ${c.user.tag}`);
