@@ -1,7 +1,7 @@
 import { ChannelType, Client } from "discord.js";
 import { env, prisma } from "../helpers.ts";
 
-export async function handleMessageCreated(client: Client) {
+export async function handleMessageUpdate(client: Client) {
   client.on("messageUpdate", async (message) => {
     if (
       //@ts-expect-error - This is a GuildForumChannel
