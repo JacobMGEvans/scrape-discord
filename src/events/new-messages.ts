@@ -17,14 +17,6 @@ export async function handleMessageCreated(client: Client) {
       messageId: message.id,
     }));
 
-    const emojiData = message.reactions.cache.map((reaction) => ({
-      id: `${reaction.emoji.name}-${message.id}`,
-      name: reaction.emoji.name,
-      animated: reaction.emoji.animated ?? false,
-      identifier: reaction.emoji.identifier,
-      messageId: message.id,
-    }));
-
     const processedMessage = await prisma.message.create({
       data: {
         id: message.id,
@@ -35,9 +27,6 @@ export async function handleMessageCreated(client: Client) {
         threadId: message.channelId,
         images: {
           create: imageData,
-        },
-        emojis: {
-          create: emojiData,
         },
       },
     });
