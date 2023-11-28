@@ -28,6 +28,19 @@ export async function handleMessageUpdate(client: Client) {
       messageId: message.id,
     }));
 
+    console.info(
+      "MESSAGE UPDATE EVENT",
+      JSON.stringify(
+        {
+          "***MESSAGE***": message,
+          "***IMAGE DATA***": imageData,
+          "***EMOJI DATA***": emojiData,
+        },
+        null,
+        2
+      )
+    );
+
     const processedMessage = await prisma.message.create({
       data: {
         id: message.id,
@@ -41,6 +54,7 @@ export async function handleMessageUpdate(client: Client) {
         },
       },
     });
+
     await prisma.emoji.updateMany({
       where: { messageId: message.id },
       data: emojiData,

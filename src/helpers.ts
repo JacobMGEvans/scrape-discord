@@ -35,19 +35,6 @@ export function isNullOrUndefined(value: unknown): value is null | undefined {
   return NullableUndefined.safeParse(value).success;
 }
 
-export function isNewMessageInThread(
-  oldThread: AnyThreadChannel<boolean>,
-  newThread: AnyThreadChannel<boolean>
-): boolean {
-  if (
-    oldThread.messages.cache.size !== newThread.messages.cache.size ||
-    oldThread.lastMessageId !== newThread.lastMessageId
-  )
-    return true;
-
-  return false;
-}
-
 const envSchema = z.object({
   TOKEN: z.string(),
   FORUM: z.string(),

@@ -31,6 +31,16 @@ export async function handleMessageCreated(client: Client) {
       },
     });
 
-    console.log("MESSAGE CREATED:", JSON.stringify(processedMessage, null, 2));
+    console.info(
+      "MESSAGE CREATED EVENT:",
+      JSON.stringify(
+        {
+          "***MESSAGE***": message,
+          "***PROCESSED MESSAGE***": processedMessage,
+        },
+        null,
+        2
+      )
+    );
   });
 }
